@@ -1,28 +1,14 @@
-//Variablen
-const generateBtn = document.querySelector("#generateBtn");
-const saveBtn = document.querySelector("#saveBtn");
-const initHeadColor = document.querySelector("header");
-let headColor;
-let colors = [];
-let currentColor = null;
-const colorValue = document.querySelector("#typoColor");
-colorValue.textContent = headColor;
+/*
+ */
 
-//init change
-changeColor();
-restoreFromLocal();
-colors.forEach(restoreList);
+// saved colors of coulette
+const colors = [];
 
-//change color im header
-function changeColor() {
-  const header = document.querySelector("header");
-  const currentBackgroundColor = header.style.backgroundColor.toLowerCase();
+// current generated color
+let currentColor = undefined;
 
-  headColor = randomHexColor();
-  header.style.backgroundColor = headColor;
-  colorValue.textContent = headColor;
-  updateSaveButtonStatus();
-}
+// local store
+const storageKey = "colors";
 
 /**
  * Toggle color of header
@@ -55,119 +41,107 @@ function randomHexColor() {
   return ("#" + red + green + blue).toUpperCase();
 }
 
-//save display color to list
-function saveColor() {
-  const currentHeader = document.querySelector("#typoColor");
-  const currentBgColor = currentHeader.style.backgroundColor.toLowerCase();
-  const list = document.querySelector("#colors");
-  const li = document.createElement("li");
-  li.setAttribute("data-color", headColor);
+// change color in header by click
+function changeColor() {
+  currentColor = randomHexColor();
 
-  currentColor = headColor;
+  const colorValueEl = document.querySelector("#colorValue");
+  colorValueEl.textContent = currentColor;
 
-  //duplicate check
-  let check = colors.includes(currentColor);
+  const body = document.querySelector("#header");
+  body.style.backgroundColor = currentColor;
+
   updateSaveButtonStatus();
-
-  //kein doppelter Farbwert ins array zufügen
-  if (check === false) {
-    colors.push(headColor);
-    list.appendChild(li);
-    li.textContent = headColor;
-    li.style.backgroundColor = headColor;
-    li.style.marginBottom = "5px";
-  }
-  updateSaveButtonStatus();
-
-  //Daten in JSON ablegen
-  saveLocal();
-
-  //delete button
-  const deleteBtn = document.createElement("button");
-  deleteBtn.innerText = "Delete";
-  deleteBtn.addEventListener("click", deleteColor);
-  li.appendChild(deleteBtn);
-  //apppendChild immer nach innerText!!
 }
 
-//update saveButton
-function updateSaveButtonStatus() {
-  const saveBtn = document.querySelector("#saveBtn");
-  const list = document.querySelector("#colors");
-  let check = colors.includes(headColor);
-
-  if (check === true) {
-    saveBtn.setAttribute("disabled", "");
-  } else {
-    saveBtn.removeAttribute("disabled");
-  }
-}
-
-//delete color
-function deleteColor(event) {
-  let deleteElement = event.target.parentElement;
-  let colorValue = deleteElement.getAttribute("data-color");
-
-  //delete from List
-  deleteElement.remove();
-
-  //delete from array
-  //deleteColorIndex = colors.indexOf(deleteElement);
-  //colors.splice(deleteColorIndex, 1);
-  const index = colors.indexOf(event);
-  colors.splice(index, 1);
-
-  //re-enable after delete color
-  updateSaveButtonStatus();
-
-  //Daten in JSON ablegen
-  saveLocal();
-}
-
-//buttons
+// click-event generate color
+const generateBtn = document.querySelector("#generateBtn");
 generateBtn.addEventListener("click", changeColor);
+
+// execute function changeColor
+changeColor();
+
+// create list-item for saved color
+function createColorElementInList(color) {
+  const colorList = document.querySelector("#colors");
+  const newColor = document.createElement("li");
+
+  newColor.innerText = color;
+  newColor.style.backgroundColor = color;
+  newColor.setAttribute("data-color", color);
+
+  const deleteButton = document.createElement("button");
+  deleteButton.innerText = "Delete Color";
+  deleteButton.style.marginLeft = "5px";
+
+  newColor.appendChild(deleteButton);
+  colorList.appendChild(newColor);
+}
+
+// save the generated color to List
+function saveColor() {
+  if (!colors.includes(currentColor)) {
+    colors.push(currentColor);
+    createColorElementInList(currentColor);
+    updateSaveButtonStatus();
+    saveColorsToLocalStorage();
+  }
+}
+
+// click-event save color
+const saveBtn = document.querySelector("#saveBtn");
 saveBtn.addEventListener("click", saveColor);
 
-/*
-Local Storage
-- Daten aus Array mit JSON ablegen
-- Bei Neuaufruf der Seite JSON neu auslesen
-- Liste neu generiern
-*/
-
-function saveLocal() {
-  const colorID = colors;
-  localStorage.setItem("arr", JSON.stringify(colorID));
-}
-
-function restoreFromLocal() {
-  let colorsFromStorage = JSON.parse(localStorage.getItem("arr"));
-  if (colorsFromStorage !== null) {
-    colors = colorsFromStorage;
+// update save button when colors saved
+function updateSaveButtonStatus() {
+  const saveButton = document.querySelector("#saveBtn");
+  if (colors.includes(currentColor)) {
+    saveButton.setAttribute("disabled", "");
+  } else {
+    saveButton.removeAttribute("disabled");
   }
 }
 
-function restoreList(color) {
-  const list = document.querySelector("#colors");
-  const li = document.createElement("li");
+// delete color from list
 
-  li.setAttribute("data-color", color);
+function deleteColor(event) {
+  const listItem = event.target.parentElement;
+  const color = listItem.getAttribute("data-color");
 
-  //kein doppelter Farbwert ins array zufügen
-  list.appendChild(li);
-  li.textContent = color;
-  li.style.backgroundColor = color;
-  li.style.marginBottom = "5px";
+  deleteColorFromArray(color);
+  colorList.removeChild(listItem);
+}
+
+// click-event delete color from list
+const colorList = document.querySelector("#colors");
+colorList.addEventListener("click", deleteColor);
+
+// delete color from colors array
+
+function deleteColorFromArray(color) {
+  const index = colors.indexOf(color);
+  colors.splice(index, 1);
 
   updateSaveButtonStatus();
-
-  //Daten in JSON ablegen
-  saveLocal();
-
-  //delete button
-  const deleteBtn = document.createElement("button");
-  deleteBtn.innerText = "Delete";
-  deleteBtn.addEventListener("click", deleteColor);
-  li.appendChild(deleteBtn);
-  //apppendChild immer nach innerText!!
+  saveColorsToLocalStorage();
 }
+
+// put saved colors to local storage
+function saveColorsToLocalStorage() {
+  const jsonColors = JSON.stringify(colors);
+  localStorage.setItem(storageKey, jsonColors);
+}
+
+// reload saved colors
+function readColorsFromLocalStorage() {
+  const storageColors = localStorage.getItem(storageKey);
+  if (storageColors !== null) {
+    const savedColors = JSON.parse(storageColors);
+    savedColors.forEach((color) => {
+      createColorElementInList(color);
+      colors.push(color);
+    });
+  }
+}
+
+readColorsFromLocalStorage();
